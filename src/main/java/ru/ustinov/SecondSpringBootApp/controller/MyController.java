@@ -2,6 +2,7 @@ package ru.ustinov.SecondSpringBootApp.controller;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.BindingResult;
@@ -10,6 +11,8 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 import ru.ustinov.SecondSpringBootApp.exceptions.ValidationFailedException;
 import ru.ustinov.SecondSpringBootApp.model.*;
+import ru.ustinov.SecondSpringBootApp.service.ModifyRequestService;
+import ru.ustinov.SecondSpringBootApp.service.ModifyResponseService;
 import ru.ustinov.SecondSpringBootApp.service.ValidationService;
 import jakarta.validation.Valid;
 import java.util.Date;
@@ -21,10 +24,17 @@ import ru.ustinov.SecondSpringBootApp.util.DateTimeUtil;
 public class MyController {
 
     private final ValidationService validationService;
+    private final ModifyResponseService modifyResponseService;
+    private final ModifyRequestService modifyRequestService;
 
     @Autowired
-    public MyController(ValidationService validationService) {
+    public MyController(ValidationService validationService,
+                        @Qualifier("ModifySystemTimeResponseService") ModifyResponseService modifyResponseService,
+                        @Qualifier("modifySourceRequestService") ModifyRequestService modifyRequestService) {
+
         this.validationService = validationService;
+        this.modifyResponseService = modifyResponseService;
+        this.modifyRequestService = modifyRequestService;
     }
 
     @PostMapping(value = "/feedback")
@@ -41,12 +51,6 @@ public class MyController {
                 .build();
 
         try {
-            // Логируем ошибки bindingResult перед валидацией (если они там уже есть)
-            if (bindingResult.hasErrors()) {
-                bindingResult.getAllErrors().forEach(error ->
-                        log.error("Ошибка в bindingResult: {}", error.getDefaultMessage())
-                );
-            }
             validationService.isValid(bindingResult);
             log.info("Проверяем корректность UID запроса");
             if ("123".equals(request.getUid())) {
@@ -65,12 +69,6 @@ public class MyController {
         } catch (ValidationFailedException e) {
             // Логируем конкретные ошибки из bindingResult
             log.error("Ошибка валидации запроса: {}", e.getMessage());
-            if (bindingResult.hasErrors()) {
-                bindingResult.getAllErrors().forEach(error ->
-                        log.error("Детали ошибки валидации: {}", error.getDefaultMessage())
-                );
-            }
-
             response.setCode(Codes.FAILED);
             response.setErrorCode(ErrorCodes.VALIDATION_EXCEPTION);
             response.setErrorMessage(ErrorMessages.VALIDATION);
@@ -87,6 +85,8 @@ public class MyController {
         }
 
         log.info("Запрос успешен: {}", response);
+        modifyResponseService.modify(response);
+        modifyRequestService.modify(request);
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 }

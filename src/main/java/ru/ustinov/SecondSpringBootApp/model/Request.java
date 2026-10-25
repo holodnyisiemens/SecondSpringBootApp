@@ -15,7 +15,8 @@ public class Request {
     private String uid;
     @NotBlank
     private String operationUid;
-    private Systems systemName;
+    //private Systems systemName;
+    private String systemName;
     @NotBlank
     private String systemTime;
     private String source;
