@@ -12,4 +12,9 @@ public class Response {
     private Codes code;
     private ErrorCodes errorCode;
     private ErrorMessages errorMessage;
+    private Positions position;
+    private Double salary;
+    private Double bonus;
+    private Integer workDays;
+    private Double annualBonus;
 }

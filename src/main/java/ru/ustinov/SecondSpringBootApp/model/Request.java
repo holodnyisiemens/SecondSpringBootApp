@@ -11,19 +11,23 @@ import lombok.AllArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class Request {
-    @NotBlank
+    /**
+     * Уникальный идентификатор сообщения
+     */
+    @NotBlank(message = "UID не может быть пустым")
     private String uid;
-    @NotBlank
     private String operationUid;
-    //private Systems systemName;
-    private String systemName;
-    @NotBlank
+    private Systems systemName;
     private String systemTime;
     private String source;
-    private int communicationId;
-    private int templateId;
-    private int productCode;
-    private int smsCode;
+    private Positions position;
+    private Double salary;
+    private Double bonus;
+    private Integer workDays;
+    private Integer communicationId;
+    private Integer templateId;
+    private Integer productCode;
+    private Integer smsCode;
 
     @Override
     public String toString() {

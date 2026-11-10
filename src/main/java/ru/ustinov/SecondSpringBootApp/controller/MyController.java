@@ -18,6 +18,7 @@ import jakarta.validation.Valid;
 import java.util.Date;
 import ru.ustinov.SecondSpringBootApp.exceptions.UnsupportedCodeException;
 import ru.ustinov.SecondSpringBootApp.util.DateTimeUtil;
+import ru.ustinov.SecondSpringBootApp.service.AnnualBonusService;
 
 @Slf4j
 @RestController
@@ -26,20 +27,27 @@ public class MyController {
     private final ValidationService validationService;
     private final ModifyResponseService modifyResponseService;
     private final ModifyRequestService modifyRequestService;
+    private final AnnualBonusService annualBonusService;
 
     @Autowired
     public MyController(ValidationService validationService,
                         @Qualifier("ModifySystemTimeResponseService") ModifyResponseService modifyResponseService,
-                        @Qualifier("modifySourceRequestService") ModifyRequestService modifyRequestService) {
+                        @Qualifier("modifySourceRequestService") ModifyRequestService modifyRequestService,
+                        AnnualBonusService annualBonusService) {
 
         this.validationService = validationService;
         this.modifyResponseService = modifyResponseService;
         this.modifyRequestService = modifyRequestService;
+        this.annualBonusService = annualBonusService;
     }
 
     @PostMapping(value = "/feedback")
     public ResponseEntity<Response> feedback(@Valid @RequestBody Request request, BindingResult bindingResult) {
         log.info("request: {}", request);
+
+        double annualBonus = annualBonusService.calculate(
+                request.getPosition(), request.getSalary(), request.getBonus(), request.getWorkDays()
+        );
 
         Response response = Response.builder()
                 .uid(request.getUid())
@@ -48,6 +56,7 @@ public class MyController {
                 .code(Codes.SUCCESS)
                 .errorCode(ErrorCodes.EMPTY)
                 .errorMessage(ErrorMessages.EMPTY)
+                .annualBonus(annualBonus)
                 .build();
 
         try {
@@ -57,7 +66,6 @@ public class MyController {
                 log.error("Выброс исключения: UID '123' не поддерживается. Запрос отклонен.");
                 throw new UnsupportedCodeException("Unsupported uid: 123");
             }
-
         } catch (UnsupportedCodeException e) {
             log.error("Ошибка. Запрос не поддерживается: {}", e.getMessage());
             response.setCode(Codes.FAILED);
@@ -65,16 +73,13 @@ public class MyController {
             response.setErrorMessage(ErrorMessages.UNSUPPORTED);
             log.info("Сформирован ответ с ошибкой поддерживаемости запроса: {}", response);
             return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
-
         } catch (ValidationFailedException e) {
-            // Логируем конкретные ошибки из bindingResult
             log.error("Ошибка валидации запроса: {}", e.getMessage());
             response.setCode(Codes.FAILED);
             response.setErrorCode(ErrorCodes.VALIDATION_EXCEPTION);
             response.setErrorMessage(ErrorMessages.VALIDATION);
             log.info("Сформирован ответ с ошибкой валидации: {}", response);
             return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
-
         } catch (Exception e) {
             log.error("Непредвиденная ошибка запроса: {}", e.getMessage(), e);
             response.setCode(Codes.FAILED);
